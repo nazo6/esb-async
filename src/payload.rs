@@ -1,25 +1,19 @@
 use crate::Error;
-use core::ops::{Deref, DerefMut};
 use bbq2::{
     queue::BBQueue,
     traits::{coordination::cas::AtomicCoord, notifier::maitake::MaiNotSpsc, storage::Inline},
 };
+use core::ops::{Deref, DerefMut};
 
 // | SW USE                        |               ACTUAL DMA PART                                    |
 // | rssi - 1 byte | pipe - 1 byte | length - 1 byte | pid_no_ack - 1 byte | payload - 1 to 252 bytes |
 
 type FramedGrantR<const N: usize> = bbq2::prod_cons::framed::FramedGrantR<
     &'static BBQueue<Inline<N>, AtomicCoord, MaiNotSpsc>,
-    Inline<N>,
-    AtomicCoord,
-    MaiNotSpsc,
     u16,
 >;
 type FramedGrantW<const N: usize> = bbq2::prod_cons::framed::FramedGrantW<
     &'static BBQueue<Inline<N>, AtomicCoord, MaiNotSpsc>,
-    Inline<N>,
-    AtomicCoord,
-    MaiNotSpsc,
     u16,
 >;
 
@@ -275,8 +269,7 @@ pub struct PayloadR<const N: usize> {
     grant: FramedGrantR<N>,
 }
 
-impl<const N: usize> PayloadR<N>
-{
+impl<const N: usize> PayloadR<N> {
     /// Create a wrapped Payload Grant from a raw BBQueue Framed Grant
     pub(crate) fn new(raw_grant: FramedGrantR<N>) -> Self {
         Self { grant: raw_grant }
@@ -340,8 +333,7 @@ impl<const N: usize> PayloadR<N>
     // }
 }
 
-impl<const N: usize> Deref for PayloadR<N>
-{
+impl<const N: usize> Deref for PayloadR<N> {
     type Target = [u8];
 
     /// Provide read only access to the payload of a grant
@@ -350,8 +342,7 @@ impl<const N: usize> Deref for PayloadR<N>
     }
 }
 
-impl<const N: usize> DerefMut for PayloadR<N>
-{
+impl<const N: usize> DerefMut for PayloadR<N> {
     /// provide read/write access to the payload portion of the grant
     fn deref_mut(&mut self) -> &mut [u8] {
         &mut self.grant[EsbHeader::header_size().into()..]
@@ -362,8 +353,7 @@ pub struct PayloadW<const N: usize> {
     grant: FramedGrantW<N>,
 }
 
-impl<const N: usize> PayloadW<N>
-{
+impl<const N: usize> PayloadW<N> {
     /// Update the header contained within this grant.
     ///
     /// This can be used to modify the pipe, length, etc. of the
@@ -382,7 +372,10 @@ impl<const N: usize> PayloadW<N>
 
         // `length` must always be 0..=252 (checked by constructor), so `u8` cast is
         // appropriate here
-        let payload_max = self.grant.len().saturating_sub(EsbHeader::header_size().into());
+        let payload_max = self
+            .grant
+            .len()
+            .saturating_sub(EsbHeader::header_size().into());
         header.length = header.length.min(payload_max as u8);
         self.grant[..EsbHeader::header_size().into()].copy_from_slice(&header.into_bytes().0);
     }
@@ -504,8 +497,7 @@ impl<const N: usize> PayloadW<N>
     }
 }
 
-impl<const N: usize> Deref for PayloadW<N>
-{
+impl<const N: usize> Deref for PayloadW<N> {
     type Target = [u8];
 
     /// provide read only access to the payload portion of the grant
@@ -514,8 +506,7 @@ impl<const N: usize> Deref for PayloadW<N>
     }
 }
 
-impl<const N: usize> DerefMut for PayloadW<N>
-{
+impl<const N: usize> DerefMut for PayloadW<N> {
     /// provide read/write access to the payload portion of the grant
     fn deref_mut(&mut self) -> &mut [u8] {
         &mut self.grant[EsbHeader::header_size().into()..]

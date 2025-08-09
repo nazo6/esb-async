@@ -6,7 +6,6 @@ use crate::{
 use bbq2::{
     queue::BBQueue,
     traits::{coordination::cas::AtomicCoord, notifier::maitake::MaiNotSpsc, storage::Inline},
-
 };
 use core::default::Default;
 use cortex_m::peripheral::NVIC;
@@ -14,16 +13,10 @@ use nrf_pac::Interrupt;
 
 pub(crate) type FramedProducer<const N: usize> = bbq2::prod_cons::framed::FramedProducer<
     &'static BBQueue<Inline<N>, AtomicCoord, MaiNotSpsc>,
-    Inline<N>,
-    AtomicCoord,
-    MaiNotSpsc,
     u16,
 >;
 pub(crate) type FramedConsumer<const N: usize> = bbq2::prod_cons::framed::FramedConsumer<
     &'static BBQueue<Inline<N>, AtomicCoord, MaiNotSpsc>,
-    Inline<N>,
-    AtomicCoord,
-    MaiNotSpsc,
     u16,
 >;
 
@@ -46,7 +39,6 @@ pub struct EsbAppSender<const OUT: usize> {
 }
 
 impl<const OUT: usize> EsbAppSender<OUT> {
-
     /// Obtain a grant for an outgoing packet to be sent over the Radio
     ///
     /// When space is available, this function will return a [`PayloadW`],
@@ -87,7 +79,8 @@ impl<const OUT: usize> EsbAppSender<OUT> {
 
         let grant = self
             .prod_to_radio
-            .wait_grant(header.payload_len() + EsbHeader::header_size()).await;
+            .wait_grant(header.payload_len() + EsbHeader::header_size())
+            .await;
 
         Ok(PayloadW::new_from_app(grant, header))
     }
@@ -147,10 +140,20 @@ impl<const IN: usize> EsbAppReceiver<IN> {
 
 impl<const OUT: usize, const IN: usize> EsbApp<OUT, IN> {
     pub fn split(self) -> (EsbAppSender<OUT>, EsbAppReceiver<IN>) {
-        let EsbApp { prod_to_radio, cons_from_radio, maximum_payload } = self;
+        let EsbApp {
+            prod_to_radio,
+            cons_from_radio,
+            maximum_payload,
+        } = self;
         (
-            EsbAppSender { prod_to_radio, maximum_payload },
-            EsbAppReceiver { cons_from_radio, maximum_payload },
+            EsbAppSender {
+                prod_to_radio,
+                maximum_payload,
+            },
+            EsbAppReceiver {
+                cons_from_radio,
+                maximum_payload,
+            },
         )
     }
 
